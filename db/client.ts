@@ -1,4 +1,4 @@
-import { drizzle } from "drizzle-orm/node-postgres";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
 
@@ -11,21 +11,51 @@ const connectionString =
   process.env.DATABASE_POSTGRES_URL_NON_POOLING ||
   "";
 
-if (!connectionString) {
-  console.error(
-    "[db] DATABASE_URL not configured. Set it in Vercel env vars.",
-  );
-}
+let realPool: Pool | null = null;
+let realDb: NodePgDatabase<typeof schema> | null = null;
 
-export const pool = new Pool({
-  connectionString,
-  ssl:
-    !connectionString || connectionString.includes("localhost")
+function createDb() {
+  if (realDb) return realDb;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL no está configurado en Vercel");
+  }
+
+  realPool = new Pool({
+    connectionString,
+    ssl: connectionString.includes("localhost")
       ? false
       : { rejectUnauthorized: false },
-  max: 5,
-  idleTimeoutMillis: 30_000,
+    max: 5,
+    idleTimeoutMillis: 30_000,
+  });
+  realDb = drizzle(realPool, { schema });
+  return realDb;
+}
+
+export const db = new Proxy({} as NodePgDatabase<typeof schema>, {
+  get(_target, prop) {
+    const resolved = createDb();
+    const value = (resolved as unknown as Record<PropertyKey, unknown>)[prop];
+    if (typeof value === "function") {
+      return value.bind(resolved);
+    }
+    return value;
+  },
 });
 
-export const db = drizzle(pool, { schema });
+export const pool = new Proxy({} as Pool, {
+  get(_target, prop) {
+    if (prop === "end") {
+      return async () => {
+        if (realPool) await realPool.end();
+      };
+    }
+    createDb();
+    const value = (realPool as unknown as Record<PropertyKey, unknown>)[prop];
+    if (typeof value === "function") {
+      return value.bind(realPool);
+    }
+    return value;
+  },
+});
 export { schema };

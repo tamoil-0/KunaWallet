@@ -51,8 +51,26 @@ async function authUser(req: VercelRequest) {
 
 function fallbackResponse(message: string) {
   const lower = message.toLowerCase();
+  if (
+    /\b(hola|buenas|hello|hi|que tal|qué tal)\b/.test(lower) &&
+    lower.length < 80
+  ) {
+    return "Hola, soy Kuna. Estoy aqui para ayudarte a ordenar tus ahorros y convertirlos en metas claras. Puedes preguntarme cosas como: cuanto debo ahorrar cada semana, que meta crear primero, que significa USDC o como va tu progreso actual.";
+  }
+  if (
+    lower.includes("crear") &&
+    (lower.includes("meta") || lower.includes("objetivo") || lower.includes("ahorro"))
+  ) {
+    return "Si, te ayudo. Para crear una buena meta necesito 3 datos: 1) nombre de la meta, por ejemplo universidad, salud o negocio; 2) monto objetivo, por ejemplo S/ 3,000; y 3) fecha limite. Como regla simple, empieza con una meta familiar concreta y un aporte semanal pequeno. En la app puedes ir a Metas > Nueva meta y registrarla en menos de un minuto.";
+  }
   if (lower.includes("universidad") || lower.includes("education") || lower.includes("hija")) {
-    return "Claro. Empezaria creando una meta para la universidad y dividiendola en aportes pequenos. Por ejemplo, si quieres ahorrar S/ 3,000 en un ano, necesitas cerca de S/ 250 al mes. Lo importante es que el monto sea constante y visible en tu meta. Puedo ayudarte a calcular un plan semanal tambien.";
+    return "Claro. Para una meta de universidad, primero define el monto total y la fecha. Por ejemplo, si quieres ahorrar S/ 3,000 en 12 meses, necesitas cerca de S/ 250 al mes o S/ 63 por semana. Mi recomendacion es crear la meta en KUNA, hacer aportes semanales y revisar el progreso cada domingo. Lo importante no es empezar grande, sino empezar constante.";
+  }
+  if (lower.includes("ahorro") || lower.includes("ahorros") || lower.includes("balance")) {
+    return "Tus ahorros deben verse como un camino, no solo como un numero. Primero separa una meta principal, luego define un aporte pequeno y constante. Por ejemplo, S/ 50 por semana ya son S/ 2,600 al ano sin contar rendimiento estimado. En KUNA puedes ver balance, metas y movimientos para saber si vas avanzando o si necesitas ajustar el plan.";
+  }
+  if (lower.includes("rendimiento") || lower.includes("apy") || lower.includes("ganar")) {
+    return "El rendimiento en KUNA se muestra como una estimacion educativa, no como una promesa garantizada. La idea es comparar el ahorro tradicional con una alternativa digital mas visible. Si ahorras todos los meses, incluso una diferencia pequena de rendimiento puede importar al final del ano. Lo mas sano es empezar conservador y priorizar metas importantes.";
   }
   if (lower.includes("usdc")) {
     return "USDC es como un dolar digital: mantiene una referencia cercana al valor del dolar y puede ayudarte a proteger parte de tus ahorros frente a la perdida de valor de la moneda local. En KUNA lo mostramos de forma simple para que entiendas tu ahorro sin entrar en detalles tecnicos.";
@@ -60,7 +78,10 @@ function fallbackResponse(message: string) {
   if (lower.includes("solana")) {
     return "Solana es una red que permite mover pequenos montos rapidamente y con costos muy bajos. En KUNA la usamos como base para validar una wallet y preparar microtransacciones futuras, sin hacer que el usuario empiece con complejidad tecnica.";
   }
-  return "Te recomiendo empezar con una meta concreta, un monto pequeno y una frecuencia realista. Por ejemplo: ahorrar S/ 10 cada dia o S/ 50 cada semana. Lo importante es ver progreso y mantener el habito. ¿Quieres que calculemos una meta juntos?";
+  if (lower.includes("deposit") || lower.includes("depositar") || lower.includes("retiro") || lower.includes("retirar")) {
+    return "Para la demo, los depositos y retiros actualizan tu balance y crean una transaccion real en la base de datos. Usalo como simulacion de microahorro: deposita montos pequenos, revisa tu progreso y conecta ese movimiento con una meta concreta.";
+  }
+  return "Te recomiendo empezar con una meta concreta, un monto pequeno y una frecuencia realista. Por ejemplo: ahorrar S/ 10 cada dia o S/ 50 cada semana. Lo importante es ver progreso y mantener el habito. Si quieres, dime tu meta, el monto y la fecha, y te propongo un plan simple.";
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

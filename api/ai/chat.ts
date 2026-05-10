@@ -1,139 +1,240 @@
-import { eq, desc } from "drizzle-orm";
-import OpenAI from "openai";
-import { db } from "../../db/client";
-import { users, wallets, savingGoals, transactions, aiConversations } from "../../db/schema";
-import { requireAuth } from "../_lib/auth";
-import { withErrorHandler } from "../_lib/handler";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const SYSTEM_PROMPT_BASE = `Eres Kuna, un asesor financiero amable, empático y claro, especializado en educación financiera para personas de zonas rurales de Puno, Perú. Tu nombre viene de la palabra quechua para "ahora" o "presente".
+const SYSTEM_PROMPT_BASE = `You are Kuna, a warm and clear financial advisor for rural families in Puno, Peru.
 
-Reglas de comportamiento:
-1. Habla en español simple, sin tecnicismos innecesarios.
-2. Cuando menciones USDC, explícalo como "dólares digitales seguros".
-3. Cuando menciones Solana, dilo como "la red que mueve el dinero sin cobrar comisiones de banco".
-4. Sé empático con metas familiares (educación de hijos, salud, negocio).
-5. Da recomendaciones concretas: montos, fechas, frecuencias.
-6. Si no sabes algo, admítelo y sugiere consultar con un asesor humano.
-7. Celebra los logros aunque sean pequeños. Cada sol ahorrado cuenta.
-8. Nunca prometas rendimientos garantizados. Usa "aproximadamente" o "históricamente".
-9. Cuando el usuario quiera crear una meta, extrae: nombre, monto objetivo, fecha, frecuencia.
-10. Termina algunas respuestas con una pregunta de seguimiento.
+Behavior rules:
+1. Reply in simple Spanish unless the user writes in English.
+2. Avoid technical jargon.
+3. Explain USDC as "dolares digitales".
+4. Explain Solana as a low-cost network for moving small amounts.
+5. Focus on family goals: education, health, business, emergencies.
+6. Give concrete suggestions with amounts, dates, and frequencies.
+7. Never promise guaranteed returns. Use "estimado" or "aproximado".
+8. Keep answers short, friendly, and practical.`;
 
-Formato:
-- Párrafos cortos (2-3 líneas máximo).
-- Emojis moderados (1-2 por respuesta).
-- Cifras en formato S/ X,XXX.XX (soles) o X.XX USDC.`;
+function dbUrl() {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.DATABASE_URL_UNPOOLED ||
+    process.env.DATABASE_POSTGRES_URL ||
+    process.env.DATABASE_POSTGRES_URL_NON_POOLING ||
+    ""
+  );
+}
 
-export default withErrorHandler(async (req, res) => {
+function cors(req: VercelRequest, res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return true;
+  }
+  return false;
+}
+
+async function authUser(req: VercelRequest) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) return null;
+  const jwt = await import("jsonwebtoken");
+  try {
+    return jwt.default.verify(
+      header.slice(7),
+      process.env.JWT_SECRET || "kuna-dev-secret-change-me",
+    ) as { userId: string; email: string };
+  } catch {
+    return null;
+  }
+}
+
+function fallbackResponse(message: string) {
+  const lower = message.toLowerCase();
+  if (lower.includes("universidad") || lower.includes("education") || lower.includes("hija")) {
+    return "Claro. Empezaria creando una meta para la universidad y dividiendola en aportes pequenos. Por ejemplo, si quieres ahorrar S/ 3,000 en un ano, necesitas cerca de S/ 250 al mes. Lo importante es que el monto sea constante y visible en tu meta. Puedo ayudarte a calcular un plan semanal tambien.";
+  }
+  if (lower.includes("usdc")) {
+    return "USDC es como un dolar digital: mantiene una referencia cercana al valor del dolar y puede ayudarte a proteger parte de tus ahorros frente a la perdida de valor de la moneda local. En KUNA lo mostramos de forma simple para que entiendas tu ahorro sin entrar en detalles tecnicos.";
+  }
+  if (lower.includes("solana")) {
+    return "Solana es una red que permite mover pequenos montos rapidamente y con costos muy bajos. En KUNA la usamos como base para validar una wallet y preparar microtransacciones futuras, sin hacer que el usuario empiece con complejidad tecnica.";
+  }
+  return "Te recomiendo empezar con una meta concreta, un monto pequeno y una frecuencia realista. Por ejemplo: ahorrar S/ 10 cada dia o S/ 50 cada semana. Lo importante es ver progreso y mantener el habito. ¿Quieres que calculemos una meta juntos?";
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (cors(req, res)) return;
   if (req.method !== "POST") return res.status(405).end();
 
-  const auth = requireAuth(req, res);
-  if (!auth) return;
-
-  const { message, history } = req.body || {};
-  if (!message || typeof message !== "string") {
-    return res.status(400).json({ error: "Mensaje vacío" });
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    return res.json({
-      response:
-        "¡Hola! Soy Kuna 🌟. Por ahora estoy en modo demo (sin conexión con IA real). Puedes probar a crear tus metas desde la sección Metas. Cuando agregues tu API key de OpenAI te responderé con consejos personalizados.",
-    });
-  }
-
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
   try {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, auth.userId))
-      .limit(1);
-    const [wallet] = await db
-      .select()
-      .from(wallets)
-      .where(eq(wallets.user_id, auth.userId))
-      .limit(1);
-    const goals = await db
-      .select()
-      .from(savingGoals)
-      .where(eq(savingGoals.user_id, auth.userId));
-    const lastTx = await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.user_id, auth.userId))
-      .orderBy(desc(transactions.created_at))
-      .limit(5);
+    const auth = await authUser(req);
+    if (!auth) return res.status(401).json({ error: "No autorizado" });
 
-    const goalsText = goals.length
-      ? goals
-          .map(
-            (g) =>
-              `- ${g.title}: S/ ${Number(g.current_amount).toFixed(2)} de S/ ${Number(g.target_amount).toFixed(2)} (${Math.round((Number(g.current_amount) / Number(g.target_amount)) * 100)}%)`,
-          )
-          .join("\n")
-      : "- (Sin metas activas todavía)";
-
-    const txSummary = lastTx
-      .map((t) => `- ${t.type}: S/ ${t.amount_pen}`)
-      .join("\n");
-
-    const contextPrompt = `${SYSTEM_PROMPT_BASE}
-
-Contexto del usuario actual:
-- Nombre: ${user?.full_name || "—"}
-- Ubicación: ${user?.location || "Puno"}
-- Balance PEN: S/ ${wallet?.balance_pen || "0.00"}
-- Balance USDC: ${wallet?.balance_usdc || "0"} USDC
-- APY actual: ${wallet?.apy_current || "6.50"}%
-- Total ganado: S/ ${wallet?.total_earned || "0.00"}
-
-Metas activas:
-${goalsText}
-
-Últimas transacciones:
-${txSummary || "(ninguna aún)"}`;
-
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: "system", content: contextPrompt },
-      ...((history || []) as { role: "user" | "assistant"; content: string }[])
-        .slice(-8)
-        .map((m) => ({ role: m.role, content: m.content })),
-      { role: "user", content: message },
-    ];
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages,
-      temperature: 0.7,
-      max_tokens: 400,
-    });
-
-    const responseText =
-      completion.choices[0]?.message?.content ||
-      "Disculpa, no pude responder ahora. Intenta de nuevo.";
-
-    try {
-      await db.insert(aiConversations).values([
-        { user_id: auth.userId, role: "user", content: message },
-        {
-          user_id: auth.userId,
-          role: "assistant",
-          content: responseText,
-          tokens_used: completion.usage?.total_tokens || 0,
-        },
-      ]);
-    } catch {
-      // ignore log persistence errors
+    const { message, history } = req.body || {};
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Mensaje vacio" });
     }
 
-    return res.json({ response: responseText });
+    let context = {
+      userName: "Maria",
+      location: "Puno, Peru",
+      balancePen: "0.00",
+      balanceUsdc: "0",
+      apy: "6.50",
+      earned: "0.00",
+      goalsText: "- No active goals yet",
+      txText: "- No recent transactions",
+    };
+
+    const connectionString = dbUrl();
+    if (connectionString) {
+      const { Pool } = await import("pg");
+      const pool = new Pool({
+        connectionString,
+        ssl: connectionString.includes("localhost")
+          ? false
+          : { rejectUnauthorized: false },
+        max: 1,
+      });
+
+      try {
+        const [userResult, walletResult, goalsResult, txResult] = await Promise.all([
+          pool.query(
+            `select full_name, location from users where id = $1 limit 1`,
+            [auth.userId],
+          ),
+          pool.query(
+            `select balance_pen, balance_usdc, apy_current, total_earned
+             from wallets
+             where user_id = $1
+             limit 1`,
+            [auth.userId],
+          ),
+          pool.query(
+            `select title, current_amount, target_amount
+             from saving_goals
+             where user_id = $1
+             order by created_at desc
+             limit 5`,
+            [auth.userId],
+          ),
+          pool.query(
+            `select type, amount_pen
+             from transactions
+             where user_id = $1
+             order by created_at desc
+             limit 5`,
+            [auth.userId],
+          ),
+        ]);
+
+        const user = userResult.rows[0];
+        const wallet = walletResult.rows[0];
+        const goals = goalsResult.rows;
+        const txs = txResult.rows;
+
+        context = {
+          userName: user?.full_name || "Maria",
+          location: user?.location || "Puno, Peru",
+          balancePen: wallet?.balance_pen || "0.00",
+          balanceUsdc: wallet?.balance_usdc || "0",
+          apy: wallet?.apy_current || "6.50",
+          earned: wallet?.total_earned || "0.00",
+          goalsText: goals.length
+            ? goals
+                .map((g) => {
+                  const progress =
+                    Number(g.target_amount) > 0
+                      ? Math.round((Number(g.current_amount) / Number(g.target_amount)) * 100)
+                      : 0;
+                  return `- ${g.title}: S/ ${Number(g.current_amount).toFixed(2)} of S/ ${Number(g.target_amount).toFixed(2)} (${progress}%)`;
+                })
+                .join("\n")
+            : "- No active goals yet",
+          txText: txs.length
+            ? txs.map((t) => `- ${t.type}: S/ ${t.amount_pen}`).join("\n")
+            : "- No recent transactions",
+        };
+      } finally {
+        await pool.end();
+      }
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(200).json({ response: fallbackResponse(message) });
+    }
+
+    try {
+      const OpenAI = (await import("openai")).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const systemPrompt = `${SYSTEM_PROMPT_BASE}
+
+Current user context:
+- Name: ${context.userName}
+- Location: ${context.location}
+- Balance PEN: S/ ${context.balancePen}
+- Balance USDC-style: ${context.balanceUsdc} USDC
+- Current APY shown in app: ${context.apy}%
+- Total earned shown in app: S/ ${context.earned}
+
+Savings goals:
+${context.goalsText}
+
+Recent transactions:
+${context.txText}`;
+
+      const messages = [
+        { role: "system" as const, content: systemPrompt },
+        ...((history || []) as { role: "user" | "assistant"; content: string }[])
+          .slice(-8)
+          .map((m) => ({ role: m.role, content: m.content })),
+        { role: "user" as const, content: message },
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        temperature: 0.7,
+        max_tokens: 380,
+      });
+
+      const response =
+        completion.choices[0]?.message?.content || fallbackResponse(message);
+
+      if (connectionString) {
+        const { Pool } = await import("pg");
+        const pool = new Pool({
+          connectionString,
+          ssl: connectionString.includes("localhost")
+            ? false
+            : { rejectUnauthorized: false },
+          max: 1,
+        });
+        try {
+          await pool.query(
+            `insert into ai_conversations (user_id, role, content, tokens_used)
+             values ($1,'user',$2,0), ($1,'assistant',$3,$4)`,
+            [auth.userId, message, response, completion.usage?.total_tokens || 0],
+          );
+        } catch {
+          // Logging should never break the AI response.
+        } finally {
+          await pool.end();
+        }
+      }
+
+      return res.status(200).json({ response });
+    } catch (err) {
+      console.error("[ai/openai]", err);
+      return res.status(200).json({ response: fallbackResponse(message) });
+    }
   } catch (err) {
     console.error("[ai/chat]", err);
-    return res.json({
-      response:
-        "Tuve un pequeño tropiezo conectándome 😔. Por favor intenta de nuevo en un momento.",
+    const message = req.body?.message;
+    return res.status(200).json({
+      response: fallbackResponse(typeof message === "string" ? message : ""),
     });
   }
-});
+}

@@ -30,18 +30,25 @@ api.interceptors.response.use(
   },
 );
 
-export interface ApiError {
-  error: string;
-  field?: string;
-}
-
 export function getErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
-    return (
-      (error.response?.data as ApiError)?.error ||
-      error.message ||
-      "Error de conexión"
-    );
+    const data = error.response?.data;
+    // Standard shape: { error: "..." }
+    if (data && typeof data === "object" && "error" in data) {
+      const e = (data as { error: unknown }).error;
+      if (typeof e === "string") return e;
+    }
+    // Vercel FUNCTION_INVOCATION_FAILED shape: { code, message }
+    if (data && typeof data === "object" && "message" in data) {
+      const m = (data as { message: unknown }).message;
+      if (typeof m === "string") {
+        return `Error en el servidor: ${m}`;
+      }
+    }
+    if (typeof data === "string") return data;
+    return error.message || "Error de conexión";
   }
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
   return "Error inesperado";
 }

@@ -1,6 +1,6 @@
 # KUNA Wallet
 
-**Tu dinero trabajando, no durmiendo.**
+**Your money working, not sleeping.**
 
 KUNA Wallet is a mobile-first Web3 educational savings wallet built for financial inclusion in rural Puno, Peru. It helps users create savings goals, understand digital-dollar savings, track balances and transactions, learn finance through a Spanish AI advisor, and link a real Solana/Phantom public address on Devnet.
 
@@ -24,7 +24,7 @@ Key pain points:
 
 Core insight:
 
-> El dinero bajo el colchon no crece.
+> Money under the mattress does not grow.
 
 ## The Solution
 
@@ -194,7 +194,7 @@ npx vercel dev
 2. Log in with `maria@kuna.pe` / `demo1234`.
 3. Review dashboard balance, goals, and transactions.
 4. Deposit or withdraw a small demo amount.
-5. Open `Kuna IA` and ask: "Como van mis ahorros?"
+5. Open `Kuna IA` and ask: "How are my savings doing?"
 6. Go to `Perfil -> Wallet`.
 7. Paste or connect a Phantom/Solana public address.
 8. Validate the address and view Devnet SOL balance + Explorer link.

@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Copy, Wallet as WalletIcon, Shield, Bell, User, Check } from "lucide-react";
+import {
+  Bell,
+  Check,
+  Copy,
+  ExternalLink,
+  PlugZap,
+  Shield,
+  User,
+  Wallet as WalletIcon,
+} from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -7,6 +16,13 @@ import { Badge } from "@/components/ui/Badge";
 import { useAuthStore } from "@/store/authStore";
 import { useUIStore } from "@/store/uiStore";
 import { PageWrapper } from "@/components/layout/PageWrapper";
+import {
+  connectPhantomWallet,
+  getDevnetSolBalance,
+  getSolanaExplorerUrl,
+  hasPhantomWallet,
+  isValidSolanaAddress,
+} from "@/services/solana.service";
 
 const TABS = [
   { id: "profile", label: "Mi perfil", icon: User },
@@ -28,6 +44,12 @@ export default function Profile() {
     goalsCompleted: true,
     weekly: false,
   });
+  const [solanaAddress, setSolanaAddress] = useState(
+    () => localStorage.getItem("kuna:solana-address") || "",
+  );
+  const [solanaBalance, setSolanaBalance] = useState<number | null>(null);
+  const [solanaValid, setSolanaValid] = useState<boolean | null>(null);
+  const [connectingSolana, setConnectingSolana] = useState(false);
 
   const initials = (user?.full_name || "K")
     .split(" ")
@@ -38,6 +60,43 @@ export default function Profile() {
   function copy(text: string) {
     navigator.clipboard.writeText(text);
     notify("Copiado al portapapeles", "success");
+  }
+
+  async function validateAndSaveSolanaAddress(address = solanaAddress) {
+    const clean = address.trim();
+    if (!isValidSolanaAddress(clean)) {
+      setSolanaValid(false);
+      setSolanaBalance(null);
+      notify("La direccion Solana no es valida", "error");
+      return;
+    }
+
+    localStorage.setItem("kuna:solana-address", clean);
+    setSolanaAddress(clean);
+    setSolanaValid(true);
+    notify("Wallet Solana vinculada en modo Devnet", "success");
+
+    try {
+      const balance = await getDevnetSolBalance(clean);
+      setSolanaBalance(balance);
+    } catch {
+      setSolanaBalance(null);
+    }
+  }
+
+  async function connectSolanaWallet() {
+    try {
+      setConnectingSolana(true);
+      const address = await connectPhantomWallet();
+      await validateAndSaveSolanaAddress(address);
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "No se pudo conectar Phantom",
+        "error",
+      );
+    } finally {
+      setConnectingSolana(false);
+    }
   }
 
   return (
@@ -157,6 +216,76 @@ export default function Profile() {
       {tab === "wallet" && (
         <Card hover={false}>
           <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-[rgba(0,212,255,0.04)] border border-[rgba(0,212,255,0.18)]">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                <div>
+                  <p className="font-display font-semibold text-text-primary">
+                    Wallet Solana vinculada
+                  </p>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    Integracion real con @solana/web3.js sobre Devnet.
+                  </p>
+                </div>
+                <Badge color={solanaValid ? "green" : "cyan"}>
+                  {solanaValid ? "Address valida" : "Devnet"}
+                </Badge>
+              </div>
+
+              <div className="grid md:grid-cols-[1fr_auto] gap-2">
+                <Input
+                  label="Public address de Solana"
+                  value={solanaAddress}
+                  onChange={(e) => {
+                    setSolanaAddress(e.target.value);
+                    setSolanaValid(null);
+                  }}
+                  placeholder="Pega tu direccion de Phantom"
+                />
+                <div className="flex md:items-end gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => validateAndSaveSolanaAddress()}
+                  >
+                    Validar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={connectSolanaWallet}
+                    loading={connectingSolana}
+                    icon={<PlugZap size={16} />}
+                  >
+                    {hasPhantomWallet() ? "Phantom" : "Conectar"}
+                  </Button>
+                </div>
+              </div>
+
+              {solanaValid === false && (
+                <p className="text-xs text-state-error mt-2">
+                  Revisa que copiaste una direccion publica de Phantom, no una seed phrase.
+                </p>
+              )}
+
+              {solanaValid && (
+                <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                  <div className="bg-bg-tertiary rounded-xl px-4 py-3 flex-1">
+                    <p className="text-xs text-text-secondary mb-1">Balance Devnet SOL</p>
+                    <p className="font-mono font-bold">
+                      {solanaBalance == null ? "No disponible" : solanaBalance.toFixed(4)}
+                    </p>
+                  </div>
+                  <a
+                    href={getSolanaExplorerUrl(solanaAddress)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[rgba(0,212,255,0.2)] text-accent-cyan hover:bg-[rgba(0,212,255,0.08)] text-sm transition"
+                  >
+                    Explorer Devnet <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
+            </div>
+
             <div>
               <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">
                 Tu dirección de wallet (Solana)

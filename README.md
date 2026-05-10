@@ -1,172 +1,251 @@
-# 🌟 KUNA WALLET
+# KUNA Wallet
 
-> **Tu dinero trabajando, no durmiendo.**
-> Billetera educativa Web3 con IA para inclusión financiera en Puno, Perú.
+**Tu dinero trabajando, no durmiendo.**
+
+KUNA Wallet is a mobile-first Web3 educational savings wallet built for financial inclusion in rural Puno, Peru. It helps users create savings goals, understand digital-dollar savings, track balances and transactions, learn finance through a Spanish AI advisor, and link a real Solana/Phantom public address on Devnet.
+
+Live demo: https://kuna-wallet.vercel.app  
+Repository: https://github.com/tamoil-0/KunaWallet  
+Demo login: `maria@kuna.pe` / `demo1234`
 
 ---
 
-## 🎯 El problema
+## The Problem
 
-En zonas rurales de Puno, Perú:
+In rural communities, many families still save informally: cash at home, "under the mattress", or in non-digital systems. That money does not grow, loses purchasing power, and does not help build access to modern financial tools.
 
-- **42%** de adultos peruanos no tienen cuenta bancaria formal *(BCRP 2024)*.
-- El ahorro informal *("bajo el colchón")* pierde **3-5%/año** por inflación.
-- Los bancos tradicionales pagan **0.8% APY** y cobran comisiones que eliminan las ganancias.
-- Las herramientas DeFi existen, pero hablan inglés y suenan a Wall Street.
+Key pain points:
 
-## 💡 La solución
+- A large share of adults in Peru still have limited or incomplete access to formal financial services.
+- Informal savings can lose around 3-5% per year through inflation and loss of purchasing power.
+- Traditional banks can feel distant, bureaucratic, and fee-heavy for low-income or rural users.
+- DeFi tools exist, but most are too technical, English-first, and not designed for family savings goals.
+- Families do not need trading dashboards. They need simple savings, education, trust, and visibility.
 
-KUNA WALLET es una billetera digital que:
+Core insight:
 
-1. **Convierte automáticamente** tus ahorros en soles (PEN) a USDC (dólares digitales).
-2. **Genera 6.5% APY** en pools de bajo riesgo en la red Solana (Marinade, Orca).
-3. **Habla contigo en español simple** mediante "Kuna", un asesor IA que entiende metas familiares ("Quiero ahorrar para la universidad de mi hija").
-4. **Sin cuenta bancaria, sin comisiones bancarias** — solo necesitas tu correo.
+> El dinero bajo el colchon no crece.
 
-## 🚀 Demo
+## The Solution
 
-> **URL:** *(añadir tras desplegar en Vercel)*
->
-> **Credenciales demo:** `maria@kuna.pe` / `demo1234`
+KUNA Wallet turns saving into a simple, educational, mobile experience.
 
-## 🏗 Stack
+Users can:
 
-| Capa | Tecnología |
-|------|-----------|
-| Frontend | React 19 · Vite · TypeScript · Tailwind CSS · Framer Motion · Zustand · Recharts · React Router |
-| Backend | Vercel Serverless Functions · Node.js |
-| Base de datos | Vercel Postgres (Neon) · Drizzle ORM |
-| Autenticación | JWT + bcrypt |
-| IA | OpenAI GPT-4o-mini |
-| Precios | CoinGecko API |
+- Create an account with email.
+- View PEN and USDC-style balances.
+- Create family savings goals.
+- Deposit and withdraw demo funds.
+- Track real transactions stored in PostgreSQL.
+- Compare potential yield against traditional savings.
+- Learn finance through short educational modules.
+- Chat with "Kuna", a Spanish AI financial advisor.
+- Link a Solana/Phantom public address, validate it with `@solana/web3.js`, read Devnet SOL balance, and open it in Solana Explorer.
+
+KUNA is not trying to bring Wall Street to Puno. It brings useful, understandable financial tools to families who need clarity first.
+
+## Hackathon Tracks
+
+### Virtuals
+
+KUNA integrates a Spanish AI advisor that receives user context, including wallet balance, savings goals, and recent transactions. The assistant explains concepts like savings, digital dollars, yield, and risk in simple language adapted to family goals.
+
+Code: [`api/ai/chat.ts`](./api/ai/chat.ts)
+
+### Solana Mobile
+
+KUNA includes a Solana web3 layer using `@solana/web3.js`:
+
+- Validates a Phantom/Solana public address.
+- Links the address to the user profile in the app.
+- Queries Devnet SOL balance.
+- Opens the account in Solana Explorer.
+- Uses a mobile-first UI designed for Saga/Seeker browser usage.
+
+Code: [`src/services/solana.service.ts`](./src/services/solana.service.ts)  
+UI: [`src/pages/Profile.tsx`](./src/pages/Profile.tsx)
+
+Current demo address:
+
+```txt
+EVvym4WUUDjhiB6o81cT3CSoFHDLj1zLANPUe6cRcLc8
+```
+
+## Features
+
+- Public landing page with problem, solution, and product story.
+- JWT authentication with bcrypt password hashing.
+- Dashboard with balance, KPIs, recent transactions, goals, and yield comparison charts.
+- Deposit and withdraw flows backed by PostgreSQL.
+- Savings goals with creation, progress tracking, and goal contributions.
+- Transactions page with filters and totals.
+- Kuna AI chat with OpenAI integration.
+- Learning modules for financial education.
+- Investment/yield explanation screen.
+- Profile page with Solana Devnet wallet validation.
+- Mobile-first UI deployed on Vercel.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React, Vite, TypeScript, Tailwind CSS, Framer Motion |
+| State/Data | Zustand, Axios, React Router |
+| Charts/UI | Recharts, Lucide Icons |
+| Backend | Vercel Serverless Functions, Node.js |
+| Database | Neon Postgres, Drizzle schema, SQL endpoints |
+| Auth | JWT, bcrypt |
+| AI | OpenAI API |
+| Web3 | Solana Devnet, `@solana/web3.js`, Phantom public address |
 | Deploy | Vercel |
 
-## 🗂 Estructura del proyecto
+## Architecture
 
+```txt
+User on mobile browser
+        |
+        v
+React + Vite + Tailwind UI
+        |
+        v
+Vercel Serverless API Routes
+        |
+        +--> Neon Postgres: users, wallets, goals, transactions
+        +--> OpenAI API: Kuna AI advisor
+        +--> Solana Devnet: address validation + balance lookup
 ```
+
+## Project Structure
+
+```txt
 kuna-wallet/
-├── api/                # Vercel Serverless Functions
-│   ├── auth/           # register, login, me
-│   ├── wallet/         # balance, deposit, withdraw
-│   ├── goals/          # CRUD + deposit a meta
-│   ├── transactions/   # listado
-│   ├── ai/chat.ts      # Kuna IA — proxy OpenAI
-│   └── prices/         # USDC ↔ PEN (CoinGecko)
-├── db/
-│   ├── schema.ts       # Drizzle schema
-│   ├── seed.ts         # Datos demo
-│   └── client.ts       # Pool postgres
-├── src/
-│   ├── components/     # ui/, layout/, dashboard/, goals/, charts/
-│   ├── pages/          # Landing, Login, Register, Dashboard, AIAdvisor, Goals, Transactions, Learn, Invest, Profile
-│   ├── store/          # authStore, uiStore (Zustand)
-│   ├── services/       # api.ts + servicios HTTP
-│   ├── utils/, types/
-│   └── App.tsx
-├── public/             # SVGs (logo, favicon, pattern andino)
-└── vercel.json
+  api/
+    ai/chat.ts
+    auth/login.ts
+    auth/register.ts
+    auth/me.ts
+    wallet/balance.ts
+    wallet/deposit.ts
+    wallet/withdraw.ts
+    goals/index.ts
+    transactions/index.ts
+    prices/usdc-pen.ts
+  db/
+    schema.ts
+    seed.ts
+    client.ts
+  src/
+    components/
+    pages/
+    services/
+      api.ts
+      solana.service.ts
+    store/
+    types/
+    utils/
+  submission-assets/
+    kuna-logo.png
+    kuna-banner.png
 ```
 
-## 🛠 Setup local
+## Local Setup
 
-### Requisitos
+### Requirements
 
 - Node.js 18+
-- Cuenta en [Vercel](https://vercel.com) con un Postgres creado
-- API key de [OpenAI](https://platform.openai.com/api-keys) *(opcional — sin ella, Kuna responde con un mensaje de demo)*
+- Neon or Vercel Postgres database
+- OpenAI API key
+- Optional: Phantom wallet for Solana Devnet demo
 
-### Pasos
+### Environment variables
+
+Create `.env.local`:
+
+```txt
+DATABASE_URL=postgresql://...
+JWT_SECRET=your_long_random_secret
+OPENAI_API_KEY=sk-...
+```
+
+### Install and run
 
 ```bash
-# 1. Instalar
 npm install
-
-# 2. Variables de entorno
-cp .env.example .env.local
-# Edita .env.local y pega:
-#   DATABASE_URL=postgres://...
-#   JWT_SECRET=cualquier_string_largo_y_seguro_de_32+_caracteres
-#   OPENAI_API_KEY=sk-...
-
-# 3. Crear tablas en Postgres
 npm run db:push
-
-# 4. Cargar datos demo (María, Carlos, metas, transacciones)
 npm run db:seed
-
-# 5. Levantar servidor de desarrollo
-npm run dev          # Solo frontend en http://localhost:5173
-
-# Para probar el frontend + las API routes localmente:
-npx vercel dev       # Levanta todo en http://localhost:3000
+npm run dev
 ```
 
-## 📋 Scripts
+Frontend runs at:
 
-| Comando | Descripción |
-|---------|-------------|
-| `npm run dev` | Servidor Vite (solo frontend) |
-| `npm run build` | TypeScript + producción Vite |
-| `npm run preview` | Preview del build |
-| `npm run db:push` | Aplicar schema a Postgres |
-| `npm run db:seed` | Cargar datos demo |
-| `npm run db:studio` | Drizzle Studio (GUI de DB) |
+```txt
+http://localhost:5173
+```
 
-## 🚢 Deploy en Vercel
+For local API routes:
 
 ```bash
-# Opción rápida con Vercel CLI
-npm i -g vercel
-vercel
-
-# O conecta el repo desde dashboard de Vercel:
-# 1. Importa el repo
-# 2. Agrega las variables de entorno (Settings → Environment Variables):
-#    - DATABASE_URL
-#    - JWT_SECRET
-#    - OPENAI_API_KEY
-# 3. Deploy
+npx vercel dev
 ```
 
-Vercel detecta automáticamente Vite + el folder `/api/` para serverless.
+## Demo Flow
 
-## 📊 Métricas para el pitch
+1. Open https://kuna-wallet.vercel.app
+2. Log in with `maria@kuna.pe` / `demo1234`.
+3. Review dashboard balance, goals, and transactions.
+4. Deposit or withdraw a small demo amount.
+5. Open `Kuna IA` and ask: "Como van mis ahorros?"
+6. Go to `Perfil -> Wallet`.
+7. Paste or connect a Phantom/Solana public address.
+8. Validate the address and view Devnet SOL balance + Explorer link.
 
-| Métrica | KUNA | Banco peruano |
-|---------|-----:|-------------:|
-| APY promedio | **6.5%** | 0.8% |
-| Comisión por tx | **<S/ 0.01** | S/ 5–15 |
-| Tiempo para abrir cuenta | **2 min** | 1–3 días |
-| Requisito mínimo | Solo correo | DNI + comprobante de domicilio + ingresos |
+## Pitch Metrics
 
-**Ejemplo:** Ahorrando S/ 500/mes durante 1 año:
+Example used in the demo narrative:
 
-- Banco: S/ 6,000 + S/ 24 = **S/ 6,024**
-- KUNA:  S/ 6,000 + S/ 243 = **S/ 6,243** *(+S/ 219 extra)*
+| Metric | KUNA | Traditional savings |
+|---|---:|---:|
+| Account opening | Email-first | Paperwork / branch |
+| User education | Spanish AI advisor | Generic financial language |
+| Savings visibility | Goals + progress | Static balance |
+| Yield example | 6.5% APY simulated | 0.8% APY example |
+| Microtransaction layer | Solana-ready | Bank fees |
 
-## 🧠 Kuna IA — el agente
+Example:
 
-Kuna usa **GPT-4o-mini** con un system prompt cuidadosamente diseñado:
+If a family saves S/ 500 per month for one year:
 
-- Explica USDC como *"dólares digitales seguros"*
-- Llama a Solana *"la red que mueve dinero sin comisiones de banco"*
-- Recibe el contexto del usuario en cada mensaje (balance, metas, últimas tx)
-- Nunca promete rendimientos garantizados (usa "aproximadamente")
-- Celebra los logros pequeños
+- Traditional example: S/ 6,000 + S/ 24 = S/ 6,024
+- KUNA demo model: S/ 6,000 + S/ 243 = S/ 6,243
+- Difference: S/ 219 additional value in the example
 
-El historial de cada conversación se guarda en `ai_conversations` para análisis posterior.
+Important: yields are presented as educational/demo estimates, not guaranteed returns.
 
-## 🎨 Design system
+## Submission Assets
 
-- **Paleta:** dark mode con dorado inca `#F5A623` + cian futurista `#00D4FF` + verde rendimiento `#00E5A0`
-- **Tipografía:** Space Grotesk (display) + DM Sans (body) + JetBrains Mono (números)
-- **Patrón andino sutil** como overlay (`/public/pattern-andino.svg`)
-- **Animaciones:** Framer Motion (page transitions, stagger, hover lifts, count-up)
+Ready-to-upload assets are included:
 
-## 🤝 Equipo
+```txt
+submission-assets/kuna-logo.png
+submission-assets/kuna-banner.png
+```
 
-Desarrollado para el Hackathon 2026 desde **Puno, Perú** 🇵🇪.
+Suggested screenshots:
 
-## 📜 Licencia
+1. Landing page.
+2. Dashboard after login.
+3. Profile -> Wallet showing a valid Solana address and Devnet SOL balance.
 
-MIT — usa este código como inspiración para tus propios proyectos de inclusión financiera.
+## References
+
+- SBS Peru financial inclusion indicators: https://www.sbs.gob.pe/inclusion-financiera-principal/cifras-de-inclusion-financiera
+- BCRP inflation reports: https://www.bcrp.gob.pe/en/inflation-report
+- BCRP payments and fintech reports: https://www.bcrp.gob.pe/publicaciones/reporte-del-sistema-nacional-de-pagos.html
+
+## Team
+
+Built for Dev3pack Hackathon 2026 from Puno, Peru.
+
+## License
+
+MIT

@@ -1,12 +1,10 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { wallets, transactions, savingGoals } from "../../db/schema";
 import { requireAuth } from "../_lib/auth";
-import { setCors } from "../_lib/cors";
+import { withErrorHandler } from "../_lib/handler";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (setCors(req, res)) return;
+export default withErrorHandler(async (req, res) => {
   if (req.method !== "POST") return res.status(405).end();
   const auth = requireAuth(req, res);
   if (!auth) return;
@@ -26,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!wallet) return res.status(404).json({ error: "Wallet no encontrada" });
 
-  const rate = 3.7; // PEN por USDC (mock estable)
+  const rate = 3.7;
   const usdcAmt = amt / rate;
 
   const newPen = Number(wallet.balance_pen) + amt;
@@ -87,4 +85,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .limit(1);
 
   return res.json({ wallet: updatedWallet, transaction });
-}
+});

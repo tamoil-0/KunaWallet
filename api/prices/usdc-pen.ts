@@ -1,11 +1,8 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { setCors } from "../_lib/cors";
+import { withErrorHandler } from "../_lib/handler";
 
 let cache: { rate: number; updated_at: string; expires: number } | null = null;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (setCors(req, res)) return;
-
+export default withErrorHandler(async (_req, res) => {
   if (cache && cache.expires > Date.now()) {
     return res.json({
       usdc_to_pen: cache.rate,
@@ -40,4 +37,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updated_at: new Date().toISOString(),
     });
   }
-}
+});

@@ -1,12 +1,10 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { desc, eq, and } from "drizzle-orm";
 import { db } from "../../db/client";
 import { transactions } from "../../db/schema";
 import { requireAuth } from "../_lib/auth";
-import { setCors } from "../_lib/cors";
+import { withErrorHandler } from "../_lib/handler";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (setCors(req, res)) return;
+export default withErrorHandler(async (req, res) => {
   const auth = requireAuth(req, res);
   if (!auth) return;
 
@@ -26,4 +24,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .limit(limit);
 
   return res.json({ transactions: list, total: list.length });
-}
+});

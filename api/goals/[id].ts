@@ -1,12 +1,11 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { savingGoals, transactions, wallets } from "../../db/schema";
 import { requireAuth } from "../_lib/auth";
-import { setCors } from "../_lib/cors";
+import { withErrorHandler } from "../_lib/handler";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (setCors(req, res)) return;
+export default withErrorHandler(async (req, res) => {
   const auth = requireAuth(req, res);
   if (!auth) return;
 
@@ -58,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   return res.status(405).end();
-}
+});
 
 async function handleDeposit(
   req: VercelRequest,

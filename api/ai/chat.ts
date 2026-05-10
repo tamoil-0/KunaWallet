@@ -1,14 +1,9 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { eq, desc } from "drizzle-orm";
 import OpenAI from "openai";
 import { db } from "../../db/client";
 import { users, wallets, savingGoals, transactions, aiConversations } from "../../db/schema";
 import { requireAuth } from "../_lib/auth";
-import { setCors } from "../_lib/cors";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { withErrorHandler } from "../_lib/handler";
 
 const SYSTEM_PROMPT_BASE = `Eres Kuna, un asesor financiero amable, empático y claro, especializado en educación financiera para personas de zonas rurales de Puno, Perú. Tu nombre viene de la palabra quechua para "ahora" o "presente".
 
@@ -29,8 +24,7 @@ Formato:
 - Emojis moderados (1-2 por respuesta).
 - Cifras en formato S/ X,XXX.XX (soles) o X.XX USDC.`;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (setCors(req, res)) return;
+export default withErrorHandler(async (req, res) => {
   if (req.method !== "POST") return res.status(405).end();
 
   const auth = requireAuth(req, res);
@@ -42,12 +36,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    // Fallback offline-friendly response
     return res.json({
       response:
         "¡Hola! Soy Kuna 🌟. Por ahora estoy en modo demo (sin conexión con IA real). Puedes probar a crear tus metas desde la sección Metas. Cuando agregues tu API key de OpenAI te responderé con consejos personalizados.",
     });
   }
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   try {
     const [user] = await db
@@ -119,16 +114,19 @@ ${txSummary || "(ninguna aún)"}`;
       completion.choices[0]?.message?.content ||
       "Disculpa, no pude responder ahora. Intenta de nuevo.";
 
-    // Persist conversation
-    await db.insert(aiConversations).values([
-      { user_id: auth.userId, role: "user", content: message },
-      {
-        user_id: auth.userId,
-        role: "assistant",
-        content: responseText,
-        tokens_used: completion.usage?.total_tokens || 0,
-      },
-    ]);
+    try {
+      await db.insert(aiConversations).values([
+        { user_id: auth.userId, role: "user", content: message },
+        {
+          user_id: auth.userId,
+          role: "assistant",
+          content: responseText,
+          tokens_used: completion.usage?.total_tokens || 0,
+        },
+      ]);
+    } catch {
+      // ignore log persistence errors
+    }
 
     return res.json({ response: responseText });
   } catch (err) {
@@ -138,4 +136,4 @@ ${txSummary || "(ninguna aún)"}`;
         "Tuve un pequeño tropiezo conectándome 😔. Por favor intenta de nuevo en un momento.",
     });
   }
-}
+});

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ToastContainer } from "@/components/ui/Toast";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const Landing = lazy(() => import("@/pages/Landing"));
 const Login = lazy(() => import("@/pages/Login"));
@@ -29,27 +30,29 @@ function LoadingFallback() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<LoadingFallback />}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/ai-advisor" element={<AIAdvisor />} />
-            <Route path="/goals" element={<Goals />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/learn" element={<Learn />} />
-            <Route path="/invest" element={<Invest />} />
-            <Route path="/profile" element={<Profile />} />
-          </Route>
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/ai-advisor" element={<AIAdvisor />} />
+              <Route path="/goals" element={<Goals />} />
+              <Route path="/transactions" element={<Transactions />} />
+              <Route path="/learn" element={<Learn />} />
+              <Route path="/invest" element={<Invest />} />
+              <Route path="/profile" element={<Profile />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-      <ToastContainer />
-    </BrowserRouter>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+        <ToastContainer />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

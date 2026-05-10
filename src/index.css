@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #080c14;
+  --bg-secondary: #0d1526;
+  --bg-tertiary: #111d35;
+  --bg-glass: rgba(13, 21, 38, 0.7);
+
+  --accent-gold: #f5a623;
+  --accent-gold-dim: #c47d0e;
+  --accent-gold-glow: rgba(245, 166, 35, 0.15);
+
+  --accent-cyan: #00d4ff;
+  --accent-cyan-dim: #0099bb;
+  --accent-cyan-glow: rgba(0, 212, 255, 0.12);
+
+  --accent-green: #00e5a0;
+  --accent-green-dim: #00a872;
+
+  --state-success: #00e5a0;
+  --state-warning: #f5a623;
+  --state-error: #ff4d6d;
+  --state-info: #00d4ff;
+
+  --text-primary: #f0f4ff;
+  --text-secondary: #8892a4;
+  --text-muted: #4a5568;
+
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-accent: rgba(245, 166, 35, 0.3);
+  --border-focus: rgba(0, 212, 255, 0.5);
+
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-gold: 0 0 30px rgba(245, 166, 35, 0.2);
+  --shadow-cyan: 0 0 30px rgba(0, 212, 255, 0.15);
+
+  --gradient-gold: linear-gradient(135deg, #f5a623 0%, #c47d0e 100%);
+  --gradient-dark: linear-gradient(180deg, #080c14 0%, #0d1526 100%);
+  --gradient-card: linear-gradient(145deg, #0d1526 0%, #111d35 100%);
+
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+body {
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse at 30% 0%, rgba(245, 166, 35, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(0, 212, 255, 0.03) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover {
+  color: var(--accent-gold);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--accent-gold);
+  color: var(--bg-primary);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold-dim);
+}
+
+/* Andean grid background utility */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.bg-andean {
+  background-image: url("/pattern-andino.svg");
+  background-repeat: repeat;
+  background-size: 60px 60px;
+  opacity: 0.04;
+}
+
+.bg-hero {
+  background-image:
+    radial-gradient(ellipse at 30% 50%, rgba(245, 166, 35, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 20%, rgba(0, 212, 255, 0.06) 0%, transparent 50%);
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Gradient text */
+.text-gradient-gold {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Shimmer skeleton */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 0%,
+    rgba(245, 166, 35, 0.05) 50%,
+    var(--bg-tertiary) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Floating particles */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(0.5px);
+}
+
+/* Pulse ring for AI active state */
+.pulse-ring::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-cyan);
+  opacity: 0;
+  animation: pulseRing 2s ease-out infinite;
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Responsive helpers */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+}
